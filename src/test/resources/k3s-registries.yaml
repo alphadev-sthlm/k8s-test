@@ -1,0 +1,17 @@
+#
+# Local registry
+#
+
+#mirrors:
+#  docker.io:
+#    endpoint:
+#      - "http://kubernetes.docker.internal:8082"
+#  registry-1.docker.io:
+#    endpoint:
+#      - "http://kubernetes.docker.internal:8082"
+#  docker.io:5000:
+#    endpoint:
+#      - "http://kubernetes.docker.internal:8082"
+#  registry-1.docker.io:5000:
+#    endpoint:
+#      - "http://kubernetes.docker.internal:8082"
