@@ -1,0 +1,16 @@
+
+In Maven’s setting.xml file, add the following section to declare your Bintray credentials. Use your API key as your password (not your login password):
+<server>
+                <id>bintray-jenson99-k8s-test</id>
+                <username>jenson99</username>
+                <password>**********</password>
+</server>
+Add the the following Distribution Management section to your project’s pom.xml file to tell Maven to deploy into this package using the credentials you configured in the previous step:
+<distributionManagement>
+                <repository>
+                <id>bintray-jenson99-k8s-test</id>
+                <name>jenson99-k8s-test</name>
+                <url>https://api.bintray.com/maven/jenson99/k8s-test/[PACKAGE_NAME]/;publish=1</url>
+                </repository>
+</distributionManagement>
+
