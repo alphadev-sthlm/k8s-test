@@ -8,8 +8,6 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.File;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import se.alphadev.k8stest.CustomCluster;
-import se.alphadev.k8stest.K8sCluster;
 import se.alphadev.k8stest.junit.extension.K8sTest;
 import se.alphadev.k8stest.junit.extension.K8sTestCluster;
 

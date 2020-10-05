@@ -10,8 +10,6 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import se.alphadev.k8stest.K8sCluster;
-import se.alphadev.k8stest.LocalK3sCluster;
 import se.alphadev.k8stest.junit.extension.K8sTest;
 import se.alphadev.k8stest.junit.extension.K8sTestCluster;
 
@@ -29,8 +27,8 @@ public class LocalK3sClusterITest extends BaseITest {
 
     @K8sTestCluster
     private K8sCluster k8sCluster = K8sCluster.builder()
-                                                .testNamespace(TEST_NAMESPACE)
-                                                .failOnExistingTestNamespace(false).build();
+                                        .testNamespace(TEST_NAMESPACE)
+                                        .failOnExistingTestNamespace(false).build();
 
     @Test @DisplayName("Is local cluster")
     void isLocalK3sCluster() throws Exception {

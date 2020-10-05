@@ -1,5 +1,7 @@
 package se.alphadev.k8stest;
 
+import static se.alphadev.k8stest.Utils.copyToResourcesdDir;
+
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;

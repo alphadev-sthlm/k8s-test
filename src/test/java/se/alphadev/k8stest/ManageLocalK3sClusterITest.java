@@ -1,34 +1,46 @@
 package se.alphadev.k8stest;
 
+import static org.apache.commons.io.FileUtils.deleteQuietly;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import java.io.File;
-import org.apache.commons.io.FileUtils;
+import java.net.ConnectException;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import se.alphadev.k8stest.LocalK3sCluster;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ManageLocalK3sClusterITest extends BaseITest {
 
-    private String TEST_NAMESPACE = "test";
+    private static String TEST_NAMESPACE = "test";
+
+    @BeforeAll
+    public static void beforeAll() {
+        new LocalK3sCluster(TEST_NAMESPACE, false)
+            .deleteK3dCluster();
+    }
 
     @Order(1)
     @Test @DisplayName("Download and install k3d")
     public void downloadAndInstallK3d() throws Exception {
         String k8sResourcesDir = System.getProperty("user.home")+"/.k8s-test";
-        FileUtils.deleteQuietly(new File(k8sResourcesDir));
+        deleteQuietly(new File(k8sResourcesDir));
 
-        new LocalK3sCluster(TEST_NAMESPACE, false).installK3d();
+//        LocalK3sCluster localK3sCluster = new LocalK3sCluster(TEST_NAMESPACE, false);
+        new K3dCommands().installK3d();
 
         assertThat(new File(k8sResourcesDir)).exists();
         assertThat(new File(k8sResourcesDir+ "/k3d/k3d")).exists();
+
+        String version =ShellExec.runAndGetOutput(k8sResourcesDir + "/k3d/k3d version | grep 'k3d version' | cut -d \" \" -f3");
+        System.out.println( version );
     }
 
     @Order(2)
@@ -51,10 +63,15 @@ public class ManageLocalK3sClusterITest extends BaseITest {
 
         LocalK3sCluster localK3sCluster = new LocalK3sCluster(TEST_NAMESPACE, false);
 
+        localK3sCluster.deleteK3dCluster();
+
         KubernetesClient client = localK3sCluster.setup().client();
 
         localK3sCluster.deleteK3dCluster();
 
-        assertThrows(Exception.class, () -> client.namespaces().withName(TEST_NAMESPACE).get());
+        KubernetesClientException kubernetesClientException = assertThrows(
+            KubernetesClientException.class,
+            () -> client.namespaces().withName(TEST_NAMESPACE).get());
+        assertTrue(kubernetesClientException.getCause() instanceof ConnectException);
     }
 }

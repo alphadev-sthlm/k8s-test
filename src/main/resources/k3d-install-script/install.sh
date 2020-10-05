@@ -23,7 +23,7 @@ initArch() {
 
 # initOS discovers the operating system for this system.
 initOS() {
-  OS=$(echo `uname`|tr '[:upper:]' '[:lower:]')
+  OS=$(uname|tr '[:upper:]' '[:lower:]')
 
   case "$OS" in
     # Minimalist GNU for Windows
@@ -62,7 +62,7 @@ verifySupported() {
 # if it needs to be changed.
 checkK3dInstalledVersion() {
   if [[ -f "${K3D_INSTALL_DIR}/${APP_NAME}" ]]; then
-    local version=$(k3d --version | cut -d " " -f3)
+    local version=$(k3d version | grep 'k3d version' | cut -d " " -f3)
     if [[ "$version" == "$TAG" ]]; then
       echo "k3d ${version} is already ${DESIRED_VERSION:-latest}"
       return 0
@@ -131,13 +131,10 @@ fail_trap() {
 
 # testVersion tests the installed client to make sure it is working.
 testVersion() {
-  set +e
-  K3D="$(which $APP_NAME)"
-  if [ "$?" = "1" ]; then
+  if ! command -v $APP_NAME &> /dev/null; then
     echo "$APP_NAME not found. Is $K3D_INSTALL_DIR on your "'$PATH?'
     exit 1
   fi
-  set -e
   echo "Run '$APP_NAME --help' to see what you can do with it."
 }
 
