@@ -22,6 +22,7 @@ import org.buildobjects.process.ProcBuilder;
 @Slf4j
 class LocalK3sCluster extends K8sCluster {
 
+    final static String K3D_VERSION_TAG = "v3.4.0";
     final static String CLUSTER_NAME = "k3s-test-cluster";
 
     final static String K3D_INSTALL_SCRIPT_LOCATION = "k3d-install-script/install.sh";
@@ -37,8 +38,8 @@ class LocalK3sCluster extends K8sCluster {
     protected KubernetesClient doConnect() {
 
         log.info("Connect to local k3s cluster");
-        if (!k3dCmd.checkK3dInstalled()) {
-            k3dCmd.installK3d();
+        if (!k3dCmd.checkK3dInstalled(K3D_VERSION_TAG)) {
+            k3dCmd.installK3d(K3D_VERSION_TAG);
         }
 
         try {
@@ -59,12 +60,7 @@ class LocalK3sCluster extends K8sCluster {
     public void deleteK3dCluster() {
         try {
             log.info("delete {}", CLUSTER_NAME);
-//            new ProcBuilder(K3D_EXEC, "delete", "--prune", "--name", CLUSTER_NAME)
-//                .withOutputStream(System.err)
-//                .withTimeoutMillis(10000).run();
-
             run(K3D_EXEC +" cluster delete "+ CLUSTER_NAME).waitFor(10, TimeUnit.SECONDS);
-
         } catch (ExternalProcessFailureException | InterruptedException e) {
             throw new K8sClusterException(e);
         }

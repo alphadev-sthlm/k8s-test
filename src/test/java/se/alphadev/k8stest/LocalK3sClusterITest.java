@@ -13,13 +13,7 @@ import org.junit.jupiter.api.Test;
 import se.alphadev.k8stest.junit.extension.K8sTest;
 import se.alphadev.k8stest.junit.extension.K8sTestCluster;
 
-//@SpringBootTest(
-//        classes = K8sTestConfiguration.class,
-//        properties = {
-//        "k8s-test.local-cluster=true",
-//        "k8s-test.namespace="+ TEST_NAMESPACE,
-//        "k8s-test.fail-on-existing-test-namespace=false"
-//    })
+
 @K8sTest
 public class LocalK3sClusterITest extends BaseITest {
 
@@ -69,7 +63,7 @@ public class LocalK3sClusterITest extends BaseITest {
         assertThat(service.getMetadata().getNamespace()).isEqualTo(TEST_NAMESPACE);
         assertThat(service.getSpec().getPorts().size()).isEqualTo(1);
         assertThat(service.getSpec().getPorts().get(0))
-            .isEqualTo(new ServicePort("http", null, 8080, "TCP", new IntOrString(8080)));
+            .isEqualTo(new ServicePort( null, "http", null, 8080, "TCP", new IntOrString(8080)));
     }
 
 }

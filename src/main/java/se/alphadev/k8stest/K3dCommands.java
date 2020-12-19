@@ -6,7 +6,6 @@ import static se.alphadev.k8stest.K8sCluster.RESOURCES_DIR;
 import static se.alphadev.k8stest.Utils.copyToResourcesdDir;
 
 import com.google.common.collect.ImmutableMap;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,23 +15,21 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 class K3dCommands {
 
-    final static String K3D_TAG = "v3.0.2";
-
     private final String CLUSTER_NAME = "k3s-test-cluster";
 
     private final String K3D_INSTALL_SCRIPT_LOCATION = "k3d-install-script/install.sh";
     private final String K3D_EXEC = RESOURCES_DIR +"/k3d/k3d";
 
 
-    protected boolean checkK3dInstalled() {
+    protected boolean checkK3dInstalled(String version) {
         return exists(Paths.get(K3D_EXEC))
-            && ShellExec.runAndGetOutput(K3D_EXEC + " --version").contains(K3D_TAG);
+            && getVersion().equals(version);
     }
 
     /**
      * Install k3d into {user.home}/.k8s-test/k3d
      */
-    void installK3d() {
+    void installK3d(String version) {
         try {
             Files.createDirectories(Paths.get(RESOURCES_DIR + "/k3d"));
             Path k3dInstallScript = copyToResourcesdDir(
@@ -43,26 +40,21 @@ class K3dCommands {
 
             Map<String, String> env = ImmutableMap.of(
                 "K3D_INSTALL_DIR",  RESOURCES_DIR + "/k3d",
-                "K3D_TAG", K3D_TAG,
+                "TAG", version,
                 "PATH", System.getenv("PATH") +":"+ RESOURCES_DIR + "/k3d");
 
             Process process = ShellExec.run(k3dInstallScript.toAbsolutePath() +" --no-sudo", env);
             if (!process.waitFor(45, SECONDS) || process.exitValue() != 0) {
                 throw new IllegalStateException("Unable to download and install k3d. See log for more info");
             }
-
-            printVersion();
-
-            log.info("k3d installed succesfully");
+            log.info("k3d {} installed succesfully", getVersion());
         } catch (Exception e) {
             throw new K8sClusterException(e);
         }
     }
 
-    protected void printVersion() throws InterruptedException, IOException {
-        Process process = ShellExec.run(K3D_EXEC +" version");
-        process.waitFor(10, SECONDS);
-        System.out.println(ShellExec.captureStdOut(process));
+    protected String getVersion() {
+        return ShellExec.runAndGetOutput(K3D_EXEC + " --version | grep 'k3d version' | cut -d ' ' -f3");
     }
 
     protected void createCluster() {

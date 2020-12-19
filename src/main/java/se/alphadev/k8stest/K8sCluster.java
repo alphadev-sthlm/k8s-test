@@ -146,7 +146,7 @@ public abstract class K8sCluster {
             .collect(Collectors.toList());
     }
 
-    public List<Pod> pods() {
+    List<Pod> pods() {
         return client().pods().inNamespace(namespace).list().getItems();
     }
 

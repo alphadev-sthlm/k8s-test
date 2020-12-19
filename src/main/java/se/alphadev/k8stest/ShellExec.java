@@ -15,7 +15,6 @@ public class ShellExec {
     static Process run(String cmd, Map<String,String> env) {
         try {
             ProcessBuilder pb = new ProcessBuilder("bash", "-c", cmd);
-
             if (env != null) {
                 pb.environment().putAll(env);
             }
@@ -26,9 +25,16 @@ public class ShellExec {
     }
 
     static String runAndGetOutput(String cmd) {
+        return runAndGetOutput(cmd, null);
+    }
+
+    static String runAndGetOutput(String cmd, Map<String,String> env) {
         try {
-            Process process = run(cmd);
-            return ShellExec.captureStdOut(process);
+            ProcessBuilder pb = new ProcessBuilder("bash", "-c", cmd);
+            if (env != null) {
+                pb.environment().putAll(env);
+            }
+            return captureStdOut(pb.start());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

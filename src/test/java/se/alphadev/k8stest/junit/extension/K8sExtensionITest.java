@@ -26,7 +26,7 @@ public class K8sExtensionITest  {
 
     @Test
     public void testK8sClusterConnected() throws Exception {
-        assertTrue(k8sCluster.pods().isEmpty());
+        assertTrue(k8sCluster.images().isEmpty());
     }
 
 }
