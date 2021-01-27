@@ -21,17 +21,13 @@ public class K8sExtension implements TestInstancePostProcessor, AfterAllCallback
 
     @Override
     public void postProcessTestInstance(final Object testInstance, final ExtensionContext context) {
-        context.getTestClass().orElseThrow(() -> new ExtensionConfigurationException("K8sExtension is only supported for test classes."));
-
-        //se.alphadev.k8stest.K8sCluster cluster = null; //SpringExtension.getApplicationContext(context).getBean(se.alphadev.k8stest.K8sCluster.class);
-        //cluster.setup();
+        context.getTestClass()
+            .orElseThrow(() -> new ExtensionConfigurationException("K8sExtension is only supported for test classes"));
 
         K8sCluster cluster = setupK8sCluster(testInstance, context);
 
         ExtensionContext.Store store = context.getStore(STORE_NAMESPACE);
         store.put(TEST_CLUSTER, cluster);
-
-//        injectK8sClusterIntoTest(testInstance, context, cluster);
     }
 
     protected K8sCluster setupK8sCluster(final Object testInstance, final ExtensionContext context) {
@@ -50,21 +46,6 @@ public class K8sExtension implements TestInstancePostProcessor, AfterAllCallback
             throw new ExtensionConfigurationException("", e);
         }
     }
-
-//    protected void injectK8sClusterIntoTest(final Object testInstance, final ExtensionContext context,
-//            se.alphadev.k8stest.K8sCluster cluster) {
-//        try {
-//            List<Field> annotatedFields = findK8sClusterAnnotatedFields(context.getTestClass().get());
-//            if (!annotatedFields.isEmpty()) {
-//                for (Field field : annotatedFields) {
-//                    field.setAccessible(true);
-//                    field.set(testInstance, cluster);
-//                }
-//            }
-//        } catch (IllegalArgumentException | IllegalAccessException e) {
-//            throw new ExtensionConfigurationException("", e);
-//        }
-//    }
 
     @Override
     public void afterAll(ExtensionContext context) throws Exception {
@@ -86,7 +67,7 @@ public class K8sExtension implements TestInstancePostProcessor, AfterAllCallback
             boolean isAnnotatedWithK8sTestCluster = AnnotationSupport.isAnnotated(field, K8sTestCluster.class);
             if (isAnnotatedWithK8sTestCluster) {
                 if (!se.alphadev.k8stest.K8sCluster.class.isAssignableFrom(field.getType())) {
-                    throw new ExtensionConfigurationException(String.format("FieldName: %s does must be of type K8sCluster", field.getName()));
+                    throw new ExtensionConfigurationException(String.format("FieldName: %s must be of type K8sCluster", field.getName()));
                 }
                 return true;
             }

@@ -1,6 +1,6 @@
 package se.alphadev.k8stest;
 
-import static java.nio.file.Files.copy;
+import static java.nio.file.Files.createDirectories;
 import static java.nio.file.Files.walk;
 import static org.awaitility.Awaitility.await;
 
@@ -25,11 +25,9 @@ import io.fabric8.kubernetes.client.Watcher;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -42,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class K8sCluster {
 
-    protected final static String RESOURCES_DIR = System.getProperty("user.home") +"/.k8s-test";
+    final static String RESOURCES_DIR = System.getProperty("user.home") +"/.k8s-test";
 
     private String namespace;
     private boolean failOnExistingTestNamespace;
@@ -76,7 +74,7 @@ public abstract class K8sCluster {
 
     protected void createResourcesDir() {
         try {
-            Files.createDirectories(Paths.get(RESOURCES_DIR));
+            createDirectories(Paths.get(RESOURCES_DIR));
         } catch (IOException e) {
             throw new K8sClusterException(e);
         }
@@ -148,7 +146,7 @@ public abstract class K8sCluster {
             .collect(Collectors.toList());
     }
 
-    public List<Pod> pods() {
+    List<Pod> pods() {
         return client().pods().inNamespace(namespace).list().getItems();
     }
 
@@ -189,7 +187,7 @@ public abstract class K8sCluster {
     }
 
     private void deleteNamespaceNoWait(String namespace) {
-        log.info("Delete {}", namespace);
+        log.info("Delete namespace {}", namespace);
         try {
             client().namespaces().withName(namespace).cascading(true).withGracePeriod(0).delete();
         } catch (Exception e) {
@@ -350,27 +348,6 @@ public abstract class K8sCluster {
         }
     }
 
-    protected Path copyToResourcesdDir(String source, String destination, boolean executable) {
-        try {
-            Path src = Paths.get(source);
-            if (!src.toFile().exists() ) {
-                src = Paths.get(getClass().getClassLoader().getResource(source).toURI());
-            }
-            Path dest = Paths.get(RESOURCES_DIR + destination);
-            log.info("Copy {} to {}", src, dest);
-            copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
-//            dest.toFile().deleteOnExit();
-            dest.toFile().setExecutable(executable);
-            return dest;
-        } catch (URISyntaxException | IOException e) {
-            log.warn("a", e);
-            throw new K8sClusterException(e);
-        } catch (Exception e) {
-            log.warn("b", e);
-            throw new K8sClusterException(e);
-        }
-    }
-
     boolean isConnected(KubernetesClient client) {
         try {
             return client.namespaces().withName("default").get() != null;
@@ -390,14 +367,9 @@ public abstract class K8sCluster {
         private boolean failOnExistingTestNamespace = true;
         private File configFile;
 
-//        public K8sClusterBuilder asLocal() {
-//            this.local = true;
-//            return this;
-//        }
-
         public K8sClusterBuilder config(File configFile) {
-            this.local = false;
             this.configFile = configFile;
+            this.local = false;
             return this;
         }
 

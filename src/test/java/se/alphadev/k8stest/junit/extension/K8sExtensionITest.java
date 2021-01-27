@@ -1,13 +1,10 @@
 package se.alphadev.k8stest.junit.extension;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import se.alphadev.k8stest.K8sCluster;
-import se.alphadev.k8stest.junit.extension.K8sTest;
-import se.alphadev.k8stest.junit.extension.K8sTestCluster;
 
 //@SpringBootTest(
 //        classes = K8sTestConfiguration.class,
@@ -28,14 +25,8 @@ public class K8sExtensionITest  {
                                         .failOnExistingTestNamespace(false).build();
 
     @Test
-    public void testK8sClusterInjected() throws Exception {
-        log.info("kljlkj");
-        assertNotNull(k8sCluster);
-    }
-
-    @Test
     public void testK8sClusterConnected() throws Exception {
-        assertTrue(k8sCluster.pods().isEmpty());
+        assertTrue(k8sCluster.images().isEmpty());
     }
 
 }

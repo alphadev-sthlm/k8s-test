@@ -1,29 +1,35 @@
 package se.alphadev.k8stest;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.nio.charset.Charset.defaultCharset;
+import static org.apache.commons.io.FileUtils.deleteQuietly;
 import static org.awaitility.Awaitility.await;
+import static se.alphadev.k8stest.ShellExec.run;
 
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.DefaultKubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClient;
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
+import org.awaitility.core.ConditionTimeoutException;
+import org.buildobjects.process.ExternalProcessFailureException;
+import org.buildobjects.process.ProcBuilder;
 
 @Slf4j
 class LocalK3sCluster extends K8sCluster {
 
+    final static String K3D_VERSION_TAG = "v3.4.0";
+    final static String CLUSTER_NAME = "k3s-test-cluster";
 
-    private final static String CLUSTER_NAME = "k3s-test-cluster";
-
-    private final static String K3D_VERSION = "v1.6.0";
-    private final static String K3D_INSTALL_SCRIPT_LOCATION = "k3d-install-script/install.sh";
-    private final static String K3D_EXEC = RESOURCES_DIR +"/k3d/k3d";
+    final static String K3D_INSTALL_SCRIPT_LOCATION = "k3d-install-script/install.sh";
+    final static String K3D_EXEC = RESOURCES_DIR +"/k3d/k3d";
     private final static String K3D_KUBECONFIG_FILE = System.getProperty("user.home") +"/.config/k3d/"+ CLUSTER_NAME +"/kubeconfig.yaml";
+
+    public K3dCommands k3dCmd = new K3dCommands();
 
     protected LocalK3sCluster(String namespace, boolean failOnExistingTestNamespace) {
         super(namespace, failOnExistingTestNamespace);
@@ -32,115 +38,55 @@ class LocalK3sCluster extends K8sCluster {
     protected KubernetesClient doConnect() {
 
         log.info("Connect to local k3s cluster");
-        if (Files.exists(Paths.get(K3D_EXEC))) { //should verify version
-            log.info("k3d already installed at {}", K3D_EXEC);
-        } else {
-            installK3d();
+        if (!k3dCmd.checkK3dInstalled(K3D_VERSION_TAG)) {
+            k3dCmd.installK3d(K3D_VERSION_TAG);
         }
 
         try {
-            return createClient( Duration.of(1, ChronoUnit.SECONDS));
-        } catch (Exception e) { log.info("Unable to connect to existing local cluster. Will create one."); }
+            deleteQuietly(new File(K3D_KUBECONFIG_FILE));
+            return setupClient( Duration.of(1, ChronoUnit.SECONDS));
+        } catch (ConditionTimeoutException e) {
+            log.info("Unable to connect to existing local cluster. Will create one."); }
 
         try {
             deleteK3dCluster();
         } catch (K8sClusterException e) {};
-        createCluster();
-        return createClient(Duration.of(30, ChronoUnit.SECONDS));
-    }
 
-    /**
-     * Install k3d into {user.home}/.k8s-test/k3d
-     */
-    protected void installK3d() {
-        try {
-            Files.createDirectories(Paths.get(RESOURCES_DIR+"/k3d"));
-            Path k3dInstallScript = copyToResourcesdDir(K3D_INSTALL_SCRIPT_LOCATION, "/k3d/install.sh", true);
+        k3dCmd.createCluster();
 
-            log.info("Run k3d install script");
-            ProcessBuilder pb = new ProcessBuilder(
-                    "bash", "-c", k3dInstallScript.toAbsolutePath() +" --no-sudo");
-            pb.environment().put("K3D_INSTALL_DIR", RESOURCES_DIR+"/k3d");
-            pb.environment().put("K3D_VERSION", K3D_VERSION);
-            pb.environment().put("PATH", System.getenv("PATH") +":"+ RESOURCES_DIR+"/k3d");
-
-            Process process = pb.inheritIO().start();
-
-            if (!process.waitFor(45, SECONDS) || process.exitValue() != 0) {
-                throw new IllegalStateException("Unable to download and install k3d. See log for more info");
-            }
-            //./k3d version
-            new ProcessBuilder(
-                    "bash", "-c",  K3D_EXEC +" version").inheritIO().start().waitFor(10, SECONDS);
-
-            log.info("k3d installed succesfully");
-        } catch (Exception e) {
-            throw new K8sClusterException(e);
-        }
-    }
-
-    protected void createCluster() {
-        try {
-            log.info("Create local k3s cluster {}", CLUSTER_NAME);
-
-            Path k3sRegistriesFile = copyToResourcesdDir("k3s-registries.yaml", "/k3s-registries.yaml", false).toAbsolutePath();
-            Process process = new ProcessBuilder(
-                    "bash", "-c",
-                    K3D_EXEC +" create --name "+ CLUSTER_NAME +
-                    publishPorts() +
-                    " --registry-name localhost" +
-                    " --registry-port 8082" +
-                    " --registries-file "+ k3sRegistriesFile)
-                    .inheritIO().start();
-
-            if (!process.waitFor(30, SECONDS) || process.exitValue() != 0) {
-                throw new K8sClusterException("Unable to create k3s cluster. See log for more info");
-            }
-        } catch (IOException | InterruptedException e) {
-            throw new K8sClusterException(e);
-        }
-    }
-
-    private String publishPorts() {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 1; i <= 20; i++) {
-            sb.append(String.format(" --publish 310%1$02d:310%1$02d@master ", i));
-        }
-        return sb.toString();
+        return setupClient(Duration.of(30, ChronoUnit.SECONDS));
     }
 
     public void deleteK3dCluster() {
         try {
             log.info("delete {}", CLUSTER_NAME);
-            new ProcessBuilder(
-                    "bash", "-c",  K3D_EXEC +" delete --prune --name "+ CLUSTER_NAME)
-                .inheritIO().start().waitFor(10, SECONDS);
-            //Delete kubeconfig?
-        } catch (InterruptedException | IOException e) {
+            run(K3D_EXEC +" cluster delete "+ CLUSTER_NAME).waitFor(10, TimeUnit.SECONDS);
+        } catch (ExternalProcessFailureException | InterruptedException e) {
             throw new K8sClusterException(e);
         }
     }
 
-    private KubernetesClient createClient(Duration timeout) {
+    private KubernetesClient setupClient(Duration timeout) {
         await().atMost(timeout).until(
-                () -> createKubeConfigFile() && isConnected(new DefaultKubernetesClient()));
+                () ->  tryCreateKubeConfigFile() && isConnected(new DefaultKubernetesClient()));
         return new DefaultKubernetesClient();
     }
 
-    private boolean createKubeConfigFile() {
-        //Abort if
-        //FATA[0000] No cluster(s) found
+    private boolean tryCreateKubeConfigFile() {
+
         try {
-            Files.deleteIfExists(Paths.get(K3D_KUBECONFIG_FILE));
-            if ( new ProcessBuilder("bash", "-c",  K3D_EXEC +" get-kubeconfig --name "+ CLUSTER_NAME).inheritIO().start().waitFor() == 0 ) {
-                Path k3dConfigFile = copyToResourcesdDir(K3D_KUBECONFIG_FILE, "kubeconfig.yaml", false);
-                System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, k3dConfigFile.toAbsolutePath() +"");
-                log.info("get-kubeconfig done");
-                return true;
-            }
+            String config = ProcBuilder.run(K3D_EXEC, "kubeconfig", "get", CLUSTER_NAME);
+
+            FileUtils.write(new File(K3D_KUBECONFIG_FILE), config, defaultCharset());
+
+            System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, K3D_KUBECONFIG_FILE);
+            log.info("kubeconfig written to {}", K3D_KUBECONFIG_FILE);
+            return true;
+        } catch (ExternalProcessFailureException e) {
+            log.warn("{} -> {}", e.getCommand(), e.getStderr());
             return false;
-        } catch (Exception e) {
-            return false;
+        } catch (IOException e) {
+            throw new K8sClusterException(e);
         }
     }
 }

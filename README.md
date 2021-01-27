@@ -1,3 +1,13 @@
+
+Todo
+- Testa builder api för deployments och poddar, men sjyssta defaults och customizable
+
+- Hitta modell för flexibel create
+  - template
+  - specs
+  - builder
+
+
 # K8s-test
 
 A library that makes it possible to interact with a local or custom(remote) kubernetes cluster in tests.
